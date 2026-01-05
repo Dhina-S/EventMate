@@ -56,6 +56,7 @@ This project was developed as a team as part of the Infosys Springboard Internsh
 ---
 
 📬 Contact
+
 Dhina
 * Role: Full Stack Developer
 * Project Type: Infosys Springboard Internship
