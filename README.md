@@ -57,9 +57,13 @@ This project was developed as a team as part of the Infosys Springboard Internsh
 
 📬 Contact
 
-Dhina
+  DHINA S
 * Role: Full Stack Developer
 * Project Type: Infosys Springboard Internship
 
 ---
 
+### Team Members
+- Dhina S
+- kishor T
+- Ayush Vashistha Mishra
