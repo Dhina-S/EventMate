@@ -4,6 +4,10 @@
 
 ---
 
+## 👥 Team Project – Infosys Springboard Internship
+
+This project was developed as a team as part of the Infosys Springboard Internship program.
+
 ## 🚀 Key Features
 
 ### 👤 User Panel (Client Side)
@@ -52,6 +56,9 @@
 ---
 
 📬 Contact
-Ayush Vashistha Mishra
+Dhina
 * Role: Full Stack Developer
 * Project Type: Infosys Springboard Internship
+
+---
+
