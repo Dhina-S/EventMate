@@ -90,7 +90,7 @@ const CreateEventPage = () => {
         });
         const min = Math.min(...prices);
         return min === Infinity ? 0 : min;
-    } catch (e) { return 0; }
+    } catch { return 0; }
   };
 
   const handleAiGenerate = async () => {

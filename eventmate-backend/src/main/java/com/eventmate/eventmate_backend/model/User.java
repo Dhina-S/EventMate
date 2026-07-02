@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -12,7 +13,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class User implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,10 +34,11 @@ public class User {
     @Column(length = 1000)
     private String bio; 
     
-    // ✅ CHANGED: Added @Lob to allow storing large Base64 Image strings
-    @Lob
-    @Column(columnDefinition = "LONGTEXT")
-    private String profileImage; 
+    // ✅ FIX: Store only the Cloudinary URL (not raw Base64 data).
+    // Base64 images are 500KB-2MB per user row — use the /api/images/upload endpoint
+    // and save only the returned URL here.
+    @Column(length = 500)
+    private String profileImage;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

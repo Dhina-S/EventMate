@@ -2,6 +2,7 @@ package com.eventmate.eventmate_backend.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,9 +14,14 @@ import java.util.Map;
 public class ImageUploadService {
 
     @Autowired
-    private Cloudinary cloudinary;
+    private ObjectProvider<Cloudinary> cloudinaryProvider;
 
     public String uploadImage(MultipartFile file) throws IOException {
+        Cloudinary cloudinary = cloudinaryProvider.getIfAvailable();
+        if (cloudinary == null) {
+            throw new IllegalStateException("Cloudinary is not configured. Set CLOUDINARY_NAME, CLOUDINARY_KEY, and CLOUDINARY_SECRET for image uploads.");
+        }
+
         // Upload the file to Cloudinary and get the result
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
         

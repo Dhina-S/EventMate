@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import EventCard from '../../components/events/EventCard';
 import api from '../../services/api'; 
 import Loader from '../../components/common/Loader';
 import AiChatWidget from '../../components/AiChatWidget';
-import { useAuth } from '../../context/AuthContext'; 
+import { useAuth } from '../../context/AuthContext';
+import useRecommendations from '../../hooks/useRecommendations'; // ✅ FIX: shared hook
 
 // ✅ UPDATED: Added "Movies" to the filter list
 const CATEGORIES = ["All", "Movies", "Music", "Technology", "Workshop", "Business", "Sports", "Others"];
 
 const HomePage = () => {
-  const navigate = useNavigate();
   const { user } = useAuth(); 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
 
-  // ✅ NEW: State to control how many events are visible
+  // ✅ FIX: State to control how many events are visible
   const [visibleCount, setVisibleCount] = useState(6);
 
-  const [recommendations, setRecommendations] = useState([]);
-  const [recLoading, setRecLoading] = useState(false);
+  // ✅ FIX: Use shared hook instead of duplicated logic
+  const { recommendations, recLoading } = useRecommendations(user);
 
   // 1. Fetch All Events (Catalog)
   useEffect(() => {
@@ -29,13 +29,10 @@ const HomePage = () => {
       try {
         const response = await api.get('/api/events');
         
-        // ✅ NEW: Sort Events (Movies First, then Nearest Date)
+        // Sort Events (Movies First, then Nearest Date)
         const sortedData = response.data.sort((a, b) => {
-            // Priority 1: Movies always at the top (Now Showing)
             if (a.eventType === 'MOVIE' && b.eventType !== 'MOVIE') return -1;
             if (a.eventType !== 'MOVIE' && b.eventType === 'MOVIE') return 1;
-            
-            // Priority 2: Sort by Date (Nearest Upcoming First)
             const dateA = new Date(a.date || '2099-12-31');
             const dateB = new Date(b.date || '2099-12-31');
             return dateA - dateB;
@@ -44,46 +41,14 @@ const HomePage = () => {
         setEvents(sortedData);
         setLoading(false);
       } catch (error) {
-        console.error("Failed to load events", error);
+        if (import.meta.env.DEV) console.error("Failed to load events", error);
         setLoading(false);
       }
     };
     fetchEvents();
   }, []);
 
-  // 2. Fetch Recommendations
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      if (!user) return;
-      setRecLoading(true);
-      try {
-        const res = await api.get('/api/bookings/my-bookings');
-        const allBookings = Array.isArray(res.data) ? res.data : [];
-
-        if (allBookings.length > 0) {
-            allBookings.sort((a, b) => b.id - a.id);
-            const lastEventId = allBookings[0].event.id;
-            const recRes = await api.get(`/api/events/recommendations/${lastEventId}`);
-            setRecommendations(recRes.data || []);
-        } else {
-            const fallbackRes = await api.get('/api/events');
-            if (Array.isArray(fallbackRes.data)) {
-                setRecommendations(fallbackRes.data.slice(0, 4));
-            }
-        }
-      } catch (error) {
-        console.error("Failed to load recommendations", error);
-      } finally {
-        setRecLoading(false);
-      }
-    };
-
-    if (user) {
-        fetchRecommendations();
-    }
-  }, [user]);
-
-  // Filter Logic
+  // 2. Filter Logic
   const filteredEvents = events.filter(event => {
     // ✅ Handle "Movies" category mapping to 'Movies' or eventType
     const matchesCategory = activeCategory === "All" || 
@@ -100,13 +65,15 @@ const HomePage = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // ✅ Reset visible count when filters change
-  useEffect(() => {
-      setVisibleCount(6);
-  }, [activeCategory, searchQuery]);
-
   // ✅ Slice for display limit
   const displayedEvents = filteredEvents.slice(0, visibleCount);
+
+  // ✅ FIX: Search button handler
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setSearchQuery(searchInput);
+    setVisibleCount(6);
+  };
 
   if (loading) return <Loader />;
 
@@ -127,24 +94,25 @@ const HomePage = () => {
             Your gateway to live concerts, tech workshops, sports, and unforgettable experiences.
             </p>
             
-            {/* Search Bar */}
+      {/* Search Bar */}
             <div className="max-w-3xl mx-auto relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full opacity-30 group-hover:opacity-50 blur transition duration-200"></div>
-                <div className="relative flex items-center bg-white dark:bg-gray-800 rounded-full shadow-2xl p-2">
+                <form onSubmit={handleSearchSubmit} className="relative flex items-center bg-white dark:bg-gray-800 rounded-full shadow-2xl p-2">
                     <span className="pl-6 text-gray-400">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </span>
                     <input 
                         type="text" 
                         placeholder="Search for events, artists, venues..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={searchInput}
+                        onChange={(e) => { setSearchInput(e.target.value); setSearchQuery(e.target.value); setVisibleCount(6); }}
                         className="w-full py-3 px-4 rounded-full focus:outline-none text-gray-700 dark:text-white dark:bg-transparent text-lg"
                     />
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold transition shadow-lg transform active:scale-95">
+                    {/* ✅ FIX: Search button now actually submits the query */}
+                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold transition shadow-lg transform active:scale-95">
                         Search
                     </button>
-                </div>
+                </form>
             </div>
         </div>
       </section>
@@ -158,7 +126,7 @@ const HomePage = () => {
                 {CATEGORIES.map(cat => (
                     <button
                     key={cat}
-                    onClick={() => setActiveCategory(cat)}
+                    onClick={() => { setActiveCategory(cat); setVisibleCount(6); }}
                     className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 border ${
                         activeCategory === cat 
                         ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105" 

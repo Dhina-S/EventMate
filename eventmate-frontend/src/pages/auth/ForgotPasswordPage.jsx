@@ -15,7 +15,7 @@ const ForgotPasswordPage = () => {
       // Call Backend
       const res = await api.post('/auth/forgot-password', { email });
       setMessage(res.data); // "If an account exists..."
-    } catch (error) {
+    } catch {
       setMessage("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);

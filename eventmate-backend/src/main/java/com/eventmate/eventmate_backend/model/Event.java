@@ -2,13 +2,14 @@ package com.eventmate.eventmate_backend.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
 @Table(name = "events")
 @Data
-public class Event {
+public class Event implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

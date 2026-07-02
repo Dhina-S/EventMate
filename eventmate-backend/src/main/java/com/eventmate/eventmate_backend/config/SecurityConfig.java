@@ -8,6 +8,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -24,6 +25,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // ✅ FIX: Enables @PreAuthorize annotations on controllers
 public class SecurityConfig {
 
     @Autowired
@@ -31,6 +33,9 @@ public class SecurityConfig {
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     // ✅ CRITICAL: Authentication Provider (Required for Login to work)
     @Bean
@@ -63,7 +68,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                 
                 // ✅ 2. Read-Only Public Data (Events, Reviews, Seats, Showtimes)
-                .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/events/search").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/events/recommendations/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/events/{id:\\d+}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/seats/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/showtimes/**").permitAll()
@@ -72,8 +80,16 @@ public class SecurityConfig {
                 // ✅ 3. AI Chat (Public for Guests)
                 .requestMatchers("/api/ai/chat").permitAll()
 
-                // ✅ 4. Protected AI Endpoints (Description Gen - Organizer Only)
-                .requestMatchers("/api/ai/**").authenticated()
+                // ✅ 4. Admin & Organizer Endpoints (defense-in-depth alongside @PreAuthorize)
+                .requestMatchers(HttpMethod.POST, "/api/showtimes/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers(HttpMethod.DELETE, "/api/showtimes/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers(HttpMethod.POST, "/api/images/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers("/api/events/my-events").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers(HttpMethod.POST, "/api/events/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers(HttpMethod.DELETE, "/api/events/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
+                .requestMatchers("/api/ai/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_ORGANIZER")
 
                 // 5. Lock Everything Else
                 .anyRequest().authenticated()
@@ -88,9 +104,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173")); 
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

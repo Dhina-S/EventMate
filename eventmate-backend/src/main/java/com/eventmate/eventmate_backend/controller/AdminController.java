@@ -25,7 +25,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AdminController {
 
     @Autowired private UserRepository userRepository;
@@ -118,8 +117,8 @@ public class AdminController {
 
         ShowTime showTime = new ShowTime();
         showTime.setEvent(event);
-        showTime.setShowDate(request.getDate());
-        showTime.setShowTime(request.getTime());
+        showTime.setShowDate(request.getShowDate());
+        showTime.setShowTime(request.getShowTime());
         showTime.setSeated(event.isSeated());
         
         if (!event.isSeated()) {

@@ -12,10 +12,10 @@ import java.util.HashMap;
 public class GeminiService {
 
     // ✅ Read from your application.properties
-    @Value("${ai.api.key}")
+    @Value("${ai.api.key:}")
     private String apiKey;
 
-    @Value("${ai.api.url}")
+    @Value("${ai.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent}")
     private String apiUrl;
 
     /**
@@ -61,8 +61,8 @@ public class GeminiService {
             return "AI could not generate a response.";
 
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Error connecting to AI Service: " + e.getMessage();
+            System.err.println("Gemini API Error: " + e.getMessage());
+            return null; // Signals failure to the caller
         }
     }
 
@@ -73,7 +73,19 @@ public class GeminiService {
             "Include these keywords naturally: %s. Use emojis.", 
             category, title, keywords
         );
-        return callGemini(prompt);
+        
+        String result = callGemini(prompt);
+        
+        // ✨ SMART FALLBACK ✨
+        if (result == null || result.contains("Error connecting to AI Service")) {
+            return String.format(
+                "Welcome to %s! 🎭 Join us for an incredible %s session focusing on %s. " +
+                "This event is designed to bring people together for an unforgettable experience. " +
+                "Don't miss out on this opportunity to connect and celebrate! ✨ #EventMate",
+                title, category, keywords
+            );
+        }
+        return result;
     }
 
     // Feature 2: Chat / Q&A

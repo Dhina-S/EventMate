@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom'; 
+import { motion } from 'framer-motion';
 import EventCard from '../../components/events/EventCard';
 import EventFilters from '../../components/events/EventFilters';
+import EventSkeleton from '../../components/common/EventSkeleton';
 import api from '../../services/api'; 
-import Loader from '../../components/common/Loader';
+
+const CATEGORIES = ["All", "Music", "Technology", "Workshop", "Business", "Sports"];
 
 const EventListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const CATEGORIES = ["All", "Music", "Technology", "Workshop", "Business", "Sports"];
 
   const [events, setEvents] = useState([]); 
   const [loading, setLoading] = useState(true); // Initial load
@@ -151,30 +153,44 @@ const EventListPage = () => {
           />
         </aside>
 
-        {/* Event Grid - Loader is NOW INSIDE here, ensuring Header stays stable */}
+        {/* Event Grid */}
         <section className="w-full md:w-3/4">
           {loading ? (
-             <div className="py-20 flex justify-center">
-                 <Loader />
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               {Array.from({ length: 6 }).map((_, i) => (
+                 <EventSkeleton key={i} />
+               ))}
              </div>
           ) : error ? (
              <div className="text-center py-20 text-red-500">{error}</div>
           ) : sortedEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: 0.08 } }
+              }}
+              initial="hidden"
+              animate="visible"
+            >
               {sortedEvents.map(event => (
                 <EventCard key={event.id} event={event} />
               ))}
-            </div>
+            </motion.div>
           ) : (
-            <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+            >
               <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No events found matching "{searchQuery}"</p>
               <button 
                 onClick={handleResetFilters} 
                 className="text-blue-600 font-semibold hover:underline"
               >
-                Clear Filters & Search
+                Clear Filters &amp; Search
               </button>
-            </div>
+            </motion.div>
           )}
         </section>
       </div>

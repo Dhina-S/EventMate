@@ -158,7 +158,7 @@ const EditEventPage = () => {
         setShowAiModal(false);
         setAiKeywords("");
       }
-    } catch (error) {
+    } catch {
       toast.error("AI Generation failed.");
     } finally {
       setAiLoading(false);

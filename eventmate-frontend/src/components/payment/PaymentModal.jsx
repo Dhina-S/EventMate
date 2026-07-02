@@ -6,7 +6,8 @@ import api from '../../services/api';
 import { FaTimes } from 'react-icons/fa';
 
 
-const stripePromise = loadStripe("pk_test_51Sg4bqE6C6hnnT2UDqIH8H3GUF7xHpXvF3mFnF7eReQVXQ9xssOFKgmpMFBd7DOhhX6k7hWTsrnV51l4OGT60TtL00TUOIjwyD", {
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_51TmTl6JAQSCOJhc8ldgvycO7gxDF8ATc6Txw2WVvff5WDh1AInRB4pB5oci1c3W3xqJB2JHBBfe8bnVXBWl9lQUC00rBLq8t6L";
+const stripePromise = loadStripe(stripeKey, {
   developerTools: {
     assistant: {
       enabled: false, 
@@ -34,7 +35,7 @@ const PaymentModal = ({ bookingId, amount, onClose, onPaymentSuccess }) => {
     if (amount > 0) fetchClientSecret();
   }, [amount]);
 
-  const handleSuccess = async (paymentIntent) => {
+  const handleSuccess = async (_paymentIntent) => {
     try {
       await api.put(`/api/bookings/confirm/${bookingId}`);
       onPaymentSuccess(); 

@@ -6,7 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,14 +18,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor // ✅ FIX: Constructor injection (Spring best practice)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtService jwtService;
-
-    // ✅ KEPT: Specific implementation injection (Matches your old code to prevent crash)
-    @Autowired
-    private MyUserDetailsService userDetailsService;
+    private final JwtService jwtService;
+    private final MyUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(
@@ -38,8 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String token;
         final String username;
 
-        // ✅ NEW LOGIC: SILENT CHECK 
-        // If no header or invalid format, just continue chain without logging spammy warnings.
+        // If no header or invalid format, continue chain without logging spammy warnings.
         // This allows public pages (Events, Seat Maps) to load without console errors.
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -59,7 +55,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 3. Load User Details
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-                // 4. Validate Token (Matches your JwtService method name 'validateToken')
+                // 4. Validate Token
                 if (jwtService.validateToken(token, userDetails)) {
                     
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -75,10 +71,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // Keep silent on errors to avoid clogging logs
+            logger.debug("JWT authentication failed: " + e.getMessage());
         }
 
         // Continue the filter chain
         filterChain.doFilter(request, response);
     }
-}
+}

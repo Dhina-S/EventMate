@@ -33,24 +33,21 @@ const AiChatWidget = ({ eventId }) => {
     setLoading(true);
 
     try {
-      console.log("🔵 Sending to AI...", { eventId, question: userText });
-
       // 2. Call Backend
       const response = await api.post('/api/ai/chat', {
         eventId: eventId,
         question: userText
       });
 
-      console.log("🟢 AI Responded:", response.data);
-
       // 3. Show AI Response
       setMessages(prev => [...prev, { sender: 'bot', text: response.data.answer }]);
 
     } catch (error) {
-      console.error("🔴 Chat Failed:", error);
       
       let errorMsg = "Sorry, I can't connect right now.";
-      if (error.response?.status === 403) {
+      if (error.response?.data?.answer) {
+        errorMsg = error.response.data.answer;
+      } else if (error.response?.status === 403) {
         errorMsg = "Security Block: The chat endpoint allows guests, but your browser might be blocking it.";
       } else if (error.response?.status === 404) {
         errorMsg = "Error: Event data not found.";

@@ -6,6 +6,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext'; 
 import EventCard from '../../components/events/EventCard';
 import Loader from '../../components/common/Loader';
+import useRecommendations from '../../hooks/useRecommendations'; // ✅ FIX: shared hook
 
 const UserDashboardPage = () => {
   const navigate = useNavigate();
@@ -15,12 +16,12 @@ const UserDashboardPage = () => {
   const [favorites, setFavorites] = useState([]);
   const [bookings, setBookings] = useState([]);
   
-  // Real Recommendations State
-  const [recommendations, setRecommendations] = useState([]);
+  // ✅ FIX: Use shared hook instead of duplicated inline logic
+  const { recommendations, recLoading } = useRecommendations(user);
   
   const [loading, setLoading] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null); 
-  const [cancellingId, setCancellingId] = useState(null); 
+  const [cancellingId, setCancellingId] = useState(null);
 
   // 1. Fetch Favorites
   useEffect(() => {
@@ -35,7 +36,7 @@ const UserDashboardPage = () => {
       if (user) fetchFavorites();
   }, [user]);
 
-  // 2. Fetch Bookings & Recommendations
+  // 2. Fetch Bookings
   const fetchBookings = async () => {
       if (!user) return;
       setLoading(true);
@@ -45,42 +46,10 @@ const UserDashboardPage = () => {
           // Sort: Newest first
           allBookings.sort((a, b) => b.id - a.id);
           setBookings(allBookings);
-
-          // AI Recommendation Logic
-          if (allBookings.length > 0) {
-              if (allBookings[0].event && allBookings[0].event.id) {
-                  const lastEventId = allBookings[0].event.id;
-                  fetchRecommendations(lastEventId);
-              }
-          } else {
-              fetchGenericRecommendations();
-          }
-
       } catch (err) {
-          console.error("Failed to load bookings", err);
+          if (import.meta.env.DEV) console.error("Failed to load bookings", err);
       } finally {
           setLoading(false);
-      }
-  };
-
-  const fetchRecommendations = async (eventId) => {
-      try {
-          const res = await api.get(`/api/events/recommendations/${eventId}`);
-          setRecommendations(res.data || []);
-      } catch (error) {
-          console.error("Failed to load recommendations", error);
-      }
-  };
-
-  const fetchGenericRecommendations = async () => {
-      try {
-          // Just fetch all and take first 4 as a fallback
-          const res = await api.get('/api/events');
-          if (Array.isArray(res.data)) {
-             setRecommendations(res.data.slice(0, 4));
-          }
-      } catch (error) {
-          console.error("Failed to load generic recommendations", error);
       }
   };
 

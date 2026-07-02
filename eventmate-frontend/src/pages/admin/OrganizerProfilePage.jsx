@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
 import { FaCamera, FaUser, FaLock, FaEnvelope, FaPhone, FaUpload } from 'react-icons/fa';
+import { useAuth } from '../../context/AuthContext';
 
 const OrganizerProfilePage = () => {
-  // ✅ Get updateUser from context
-  const { user, updateUser } = useAuth(); 
+  const { updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile"); 
   const fileInputRef = useRef(null);
@@ -26,11 +25,6 @@ const OrganizerProfilePage = () => {
     confirmPassword: ''
   });
 
-  // Fetch Profile Data
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
   const fetchProfile = async () => {
     try {
       const res = await api.get('/api/users/profile');
@@ -48,6 +42,11 @@ const OrganizerProfilePage = () => {
       setLoading(false);
     }
   };
+
+  // Fetch Profile Data
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   // Handle Input Change
   const handleChange = (e) => {

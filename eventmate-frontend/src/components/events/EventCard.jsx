@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const EventCard = ({ event }) => {
   // 1. Handle fallback for missing data
@@ -12,7 +13,14 @@ const EventCard = ({ event }) => {
   const displayImage = imageUrl || image || 'https://via.placeholder.com/400x200';
 
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden border border-gray-100 dark:border-gray-700 flex flex-col h-full">
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 30 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }
+      }}
+      whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.2 } }}
+      className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-2xl transition-shadow duration-300 overflow-hidden border border-gray-100 dark:border-gray-700 flex flex-col h-full"
+    >
       
       {/* Event Image Container with Zoom Effect */}
       <div className="relative h-52 overflow-hidden">
@@ -68,7 +76,7 @@ const EventCard = ({ event }) => {
           </Link>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

@@ -15,10 +15,10 @@ import java.util.Map;
 @Service
 public class AiServiceImpl implements AiService {
 
-    @Value("${ai.api.url}")
+@Value("${ai.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent}")
     private String apiUrl;
 
-    @Value("${ai.api.key}") 
+    @Value("${ai.api.key:}")
     private String apiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();

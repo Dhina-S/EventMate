@@ -8,11 +8,6 @@ const ManageEventsPage = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch Events
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
   const fetchEvents = async () => {
     try {
         // ✅ Call the specific endpoint for the logged-in organizer
@@ -25,6 +20,11 @@ const ManageEventsPage = () => {
     }
   };
 
+  // 1. Fetch Events
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
   // 2. Delete Logic
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
@@ -33,7 +33,7 @@ const ManageEventsPage = () => {
           // Remove from UI immediately
           setEvents(events.filter(event => event.id !== id));
           alert("Event Deleted.");
-      } catch (error) {
+      } catch {
           alert("Failed to delete. You might not have permission.");
       }
     }

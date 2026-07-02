@@ -9,6 +9,7 @@ import com.eventmate.eventmate_backend.repository.BookingRepository;
 import com.eventmate.eventmate_backend.repository.EventRepository;
 import com.eventmate.eventmate_backend.repository.ShowTimeRepository;
 import com.eventmate.eventmate_backend.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 public class BookingService {
 
@@ -84,13 +86,17 @@ public class BookingService {
             throw new RuntimeException("Cannot book more than " + MAX_TICKETS_PER_BOOKING + " tickets at once.");
         }
 
-        // 6. Check Availability
-        // ✅ FIX: Only check generic Event capacity if it is NOT a movie (showTime is null)
-        // Movies have 0 capacity at event level, so this check would fail otherwise.
+        // 6. Check Availability & Atomically Decrement Seats
+        // ✅ FIX: Uses DB-level atomic update to prevent race conditions (overselling)
+        // Two concurrent requests both passing a Java check would cause overselling.
         if (showTime == null) {
-            if (event.getAvailableSeats() < finalCount) {
+            int updated = eventRepository.decrementAvailableSeats(event.getId(), finalCount);
+            if (updated == 0) {
                 throw new RuntimeException("Sold Out! Not enough seats available.");
             }
+            // Reload the event to get the updated seat count
+            event = eventRepository.findById(event.getId())
+                    .orElseThrow(() -> new RuntimeException("Event not found"));
         }
 
         // 7. Generate Seat IDs (if general admission)
@@ -117,6 +123,7 @@ public class BookingService {
         booking.setTicketsCount(finalCount);
         booking.setSeats(finalSeats); 
         booking.setStatus("PENDING"); 
+        booking.setTicketNumber(java.util.UUID.randomUUID().toString()); // ✅ NEW: Set unique ticket number 
 
         if (request.getTotalPrice() != null && request.getTotalPrice() > 0) {
             booking.setTotalPrice(request.getTotalPrice());
@@ -124,12 +131,8 @@ public class BookingService {
             booking.setTotalPrice(event.getPrice() * finalCount);
         }
 
-        // 9. Update Event Capacity
-        // ✅ FIX: Only update Event capacity for Standard Events. Movies handle capacity via Seats/Showtimes.
-        if (showTime == null) {
-            event.setAvailableSeats(event.getAvailableSeats() - finalCount);
-            eventRepository.save(event);
-        }
+        // 9. Update Event Capacity (already done atomically above for standard events)
+        // ✅ FIX: Movies handle capacity via Seats/Showtimes — no event-level update needed
 
         Booking savedBooking = bookingRepository.save(booking);
 
@@ -141,10 +144,11 @@ public class BookingService {
                 event.getTitle(),
                 savedBooking.getId().toString(),
                 finalCount,
-                savedBooking.getTotalPrice()
+                savedBooking.getTotalPrice(),
+                savedBooking.getTicketNumber()
             );
         } catch (Exception e) {
-            System.err.println("Failed to send email: " + e.getMessage());
+            log.error("Failed to send booking confirmation email to {}: {}", user.getEmail(), e.getMessage());
         }
 
         return savedBooking;

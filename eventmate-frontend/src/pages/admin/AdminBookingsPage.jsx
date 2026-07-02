@@ -27,7 +27,7 @@ const AdminBookingsPage = () => {
         await api.put(`/api/bookings/cancel/${id}`);
         alert("Booking Cancelled!");
         fetchBookings(); 
-      } catch (error) {
+      } catch {
         alert("Failed to cancel booking.");
       }
     }

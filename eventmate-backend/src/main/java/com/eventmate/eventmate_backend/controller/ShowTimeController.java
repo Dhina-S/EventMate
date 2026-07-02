@@ -1,35 +1,32 @@
 package com.eventmate.eventmate_backend.controller;
 
+import com.eventmate.eventmate_backend.dto.ShowTimeRequest;
 import com.eventmate.eventmate_backend.model.Event;
 import com.eventmate.eventmate_backend.model.Hall;
 import com.eventmate.eventmate_backend.model.ShowTime;
 import com.eventmate.eventmate_backend.repository.EventRepository;
 import com.eventmate.eventmate_backend.repository.HallRepository;
 import com.eventmate.eventmate_backend.repository.ShowTimeRepository;
-import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/showtimes")
-@CrossOrigin(origins = "http://localhost:5173")
+@RequiredArgsConstructor
+@EnableMethodSecurity
 public class ShowTimeController {
 
-    @Autowired
-    private ShowTimeRepository showTimeRepository;
+    private final ShowTimeRepository showTimeRepository;
+    private final EventRepository eventRepository;
+    private final HallRepository hallRepository;
 
-    @Autowired
-    private EventRepository eventRepository;
-
-    @Autowired
-    private HallRepository hallRepository;
-
-    // ✅ NEW: Create a Showtime (Links Movie + Hall + Time)
+    // ✅ FIX: Secured — only ADMIN or ORGANIZER can create showtimes
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ORGANIZER')")
     @PostMapping("/create")
     public ResponseEntity<ShowTime> createShowTime(@RequestBody ShowTimeRequest request) {
         Event event = eventRepository.findById(request.getEventId())
@@ -43,11 +40,11 @@ public class ShowTimeController {
         showTime.setHall(hall);
         showTime.setShowDate(request.getShowDate());
         showTime.setShowTime(request.getShowTime());
-        
+
         // Snapshot the seating config from the Hall at the time of creation
-        showTime.setSeated(true); 
-        
-        // For standard events, we might track general tickets, but for movies, we use the Hall layout
+        showTime.setSeated(true);
+
+        // For movies, we use the Hall layout for seating capacity
         showTime.setAvailableGeneralTickets(hall.getTotalCapacity());
 
         return ResponseEntity.ok(showTimeRepository.save(showTime));
@@ -65,14 +62,4 @@ public class ShowTimeController {
     public ResponseEntity<List<ShowTime>> getShowTimesByEvent(@PathVariable Long eventId) {
         return ResponseEntity.ok(showTimeRepository.findByEventId(eventId));
     }
-
-    // ✅ DTO for Request Body (Inner Class to avoid new file)
-    @Data
-    public static class ShowTimeRequest {
-        private Long eventId;
-        private Long hallId;
-        private LocalDate showDate;
-        private LocalTime showTime;
-        private Double price; // Optional if you want dynamic pricing per show
-    }
-}
+}

@@ -3,14 +3,16 @@ package com.eventmate.eventmate_backend.controller;
 import com.eventmate.eventmate_backend.dto.EventRequest;
 import com.eventmate.eventmate_backend.model.Event;
 import com.eventmate.eventmate_backend.model.User;
-import com.eventmate.eventmate_backend.repository.BookingRepository; // ✅ Need this
+import com.eventmate.eventmate_backend.repository.BookingRepository;
 import com.eventmate.eventmate_backend.repository.EventRepository;
-import com.eventmate.eventmate_backend.repository.ShowTimeRepository; // ✅ Need this
+import com.eventmate.eventmate_backend.repository.ShowTimeRepository;
 import com.eventmate.eventmate_backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional; // ✅ Transactional
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -19,7 +21,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/events")
-@CrossOrigin(origins = "http://localhost:5173")
 public class EventController {
 
     @Autowired
@@ -41,9 +42,11 @@ public class EventController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // 1. Get All Events (Public)
+    // 1. Get All Events (Public) — Cached in Redis for 5 minutes
     @GetMapping
+    @Cacheable(value = "events", unless = "#result.isEmpty()")
     public List<Event> getAllEvents() {
+        System.out.println("[CACHE MISS] Fetching events from database...");
         return eventRepository.findAll();
     }
 
@@ -99,6 +102,7 @@ public class EventController {
 
     // 6. Create Event (Protected)
     @PostMapping("/create")
+    @CacheEvict(value = "events", allEntries = true)
     public ResponseEntity<String> createEvent(@RequestBody EventRequest request) {
         User organizer = getLoggedInUser();
         
@@ -113,6 +117,7 @@ public class EventController {
 
     // 7. Update Event (Protected)
     @PutMapping("/{id}")
+    @CacheEvict(value = "events", allEntries = true)
     public ResponseEntity<String> updateEvent(@PathVariable Long id, @RequestBody EventRequest request) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
@@ -132,7 +137,8 @@ public class EventController {
     // 8. Delete Event (Protected)
     // ✅ FIX: Delete children first (Cascade logic manually implemented for safety)
     @DeleteMapping("/{id}")
-    @Transactional // Ensure atomic operation
+    @Transactional
+    @CacheEvict(value = "events", allEntries = true)
     public ResponseEntity<String> deleteEvent(@PathVariable Long id) {
         Event event = eventRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Event not found"));

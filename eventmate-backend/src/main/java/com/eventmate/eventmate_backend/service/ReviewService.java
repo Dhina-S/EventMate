@@ -29,8 +29,12 @@ public class ReviewService {
                 .orElseThrow(() -> new RuntimeException("Event not found"));
 
         // ✅ SECURITY CHECK: Has the user actually booked this event?
-        boolean hasBooking = bookingRepository.existsByUserAndEventAndStatus(user, event, "CONFIRMED");
-        
+        boolean hasBooking = bookingRepository.existsByUserIdAndEventIdAndStatus(
+        user.getId(),
+        event.getId(),
+        "CONFIRMED"
+        );
+
         if (!hasBooking) {
             throw new RuntimeException("You can only review events you have booked and confirmed!");
         }
@@ -39,10 +43,11 @@ public class ReviewService {
         review.setUser(user);
         review.setEvent(event);
         review.setRating(request.getRating());
-        review.setComment(request.getComment());
+        review.setContent(request.getContent());
 
         // Simple AI Sentiment Logic
-        String text = request.getComment().toLowerCase();
+        String text = request.getContent().toLowerCase();
+
         if (text.contains("good") || text.contains("great") || text.contains("love") || text.contains("amazing")) {
             review.setSentiment("Positive");
         } else if (text.contains("bad") || text.contains("hate") || text.contains("worst") || text.contains("poor")) {

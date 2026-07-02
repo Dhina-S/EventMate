@@ -7,6 +7,8 @@ import java.time.LocalTime;
 @Data
 public class ShowTimeRequest {
     private Long eventId;
-    private LocalDate date;
-    private LocalTime time;
+    private Long hallId;
+    private LocalDate showDate;
+    private LocalTime showTime;
+    private Double price; // Optional: dynamic pricing per showtime
 }

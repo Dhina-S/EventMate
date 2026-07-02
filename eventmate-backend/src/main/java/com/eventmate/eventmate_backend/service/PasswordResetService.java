@@ -29,6 +29,9 @@ public class PasswordResetService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url}")
+    private String frontendUrl;
+
     // Step 1: Process Forgot Password Request
     @Transactional
     public void processForgotPassword(String email) {
@@ -71,7 +74,14 @@ public class PasswordResetService {
             return "Token has expired. Please request a new one.";
         }
 
-        // Token is valid. Update password.
+        // Token is valid. Validate new password.
+        try {
+            validatePasswordStrength(newPassword);
+        } catch (RuntimeException e) {
+            return e.getMessage();
+        }
+
+        // Update password.
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
@@ -84,7 +94,7 @@ public class PasswordResetService {
 
     private void sendResetEmail(String toEmail, String token) {
         // This link points to your React Frontend Reset Page
-        String resetLink = "http://localhost:5173/reset-password?token=" + token;
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
         
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -98,6 +108,24 @@ public class PasswordResetService {
             // FALLBACK: If email config is wrong, print the link here so you can test it!
             System.err.println("⚠️ Email failed to send (Check application.properties).");
             System.out.println("👉 TEST MODE - Click this link to reset: " + resetLink);
+        }
+    }
+
+    private void validatePasswordStrength(String password) {
+        if (password == null || password.length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters long.");
+        }
+        boolean hasDigit = false;
+        boolean hasLetter = false;
+        for (char c : password.toCharArray()) {
+            if (Character.isDigit(c)) {
+                hasDigit = true;
+            } else if (Character.isLetter(c)) {
+                hasLetter = true;
+            }
+        }
+        if (!hasDigit || !hasLetter) {
+            throw new RuntimeException("Password must contain both letters and digits.");
         }
     }
 }

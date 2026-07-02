@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import SeatSelection from '../../components/events/SeatSelection'; 
 import ReviewSection from '../../components/ReviewSection';
 import AiChatWidget from '../../components/AiChatWidget';
+import toast from 'react-hot-toast'; // ✅ FIX: Use toast instead of alert()
 
 const EventDetailsPage = () => {
   const { id } = useParams();
@@ -16,7 +17,6 @@ const EventDetailsPage = () => {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [reviews, setReviews] = useState([]); 
 
   // General State
   const [ticketCount, setTicketCount] = useState(1);
@@ -47,12 +47,9 @@ const EventDetailsPage = () => {
              const seatRes = await api.get(`/api/seats/occupied/${id}`);
              setOccupiedSeats(seatRes.data);
         }
-
-        const reviewRes = await api.get(`/api/reviews/event/${id}`);
-        setReviews(reviewRes.data);
         
         setLoading(false);
-      } catch (err) {
+      } catch {
         setError("Event not found or server error.");
         setLoading(false);
       }
@@ -76,19 +73,20 @@ const EventDetailsPage = () => {
                   setSelectedDate(dates[0]);
               }
           })
-          .catch(err => console.error("Failed to load showtimes", err));
+          .catch(err => {
+              if (import.meta.env.DEV) console.error("Failed to load showtimes", err);
+          });
   }, [id]);
 
   // 3. Fetch Occupied Seats when Showtime Changes (Crucial for Movies)
   useEffect(() => {
     if (selectedShowTime) {
-        // Reset seat selection when changing showtime
-        setSelectedSeats([]); 
-        
         // Fetch occupied seats SPECIFIC to this showtime
         api.get(`/api/seats/occupied/showtime/${selectedShowTime.id}`)
             .then(res => setOccupiedSeats(res.data))
-            .catch(err => console.error("Failed to load seats", err));
+            .catch(err => {
+                if (import.meta.env.DEV) console.error("Failed to load seats", err);
+            });
     }
   }, [selectedShowTime]);
 
@@ -101,7 +99,7 @@ const EventDetailsPage = () => {
             const isFav = res.data.some(fav => fav.id === parseInt(id));
             setIsFavorite(isFav);
         } catch (e) {
-            console.error("Failed to check favorites", e);
+            if (import.meta.env.DEV) console.error("Failed to check favorites", e);
         }
     };
     checkFavorite();
@@ -109,7 +107,8 @@ const EventDetailsPage = () => {
 
   const toggleFavorite = async () => {
       if (!user) {
-          alert("Please login to save events!");
+          // ✅ FIX: Use toast instead of browser-blocking alert()
+          toast.error("Please login to save events!");
           return;
       }
 
@@ -122,7 +121,7 @@ const EventDetailsPage = () => {
               setIsFavorite(true);
           }
       } catch (error) {
-          console.error("Failed to toggle favorite", error);
+          if (import.meta.env.DEV) console.error("Failed to toggle favorite", error);
       }
   };
 
@@ -332,7 +331,7 @@ const EventDetailsPage = () => {
                         {uniqueDates.map(date => (
                             <button
                                 key={date}
-                                onClick={() => { setSelectedDate(date); setSelectedShowTime(null); }}
+                                onClick={() => { setSelectedDate(date); setSelectedShowTime(null); setSelectedSeats([]); }}
                                 className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
                                     selectedDate === date 
                                     ? "bg-blue-600 text-white border-blue-600 shadow-md" 
@@ -350,9 +349,9 @@ const EventDetailsPage = () => {
                     <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Select Showtime</h4>
                     <div className="grid grid-cols-3 gap-2">
                         {availableShowsForDate.map((st) => (
-                            <button
+                             <button
                                 key={st.id}
-                                onClick={() => setSelectedShowTime(st)}
+                                onClick={() => { setSelectedShowTime(st); setSelectedSeats([]); }}
                                 className={`px-2 py-2 text-sm rounded-lg border transition text-center ${
                                     selectedShowTime?.id === st.id
                                     ? "bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 dark:ring-blue-900"

@@ -39,6 +39,10 @@ public class Booking {
 
     private LocalDateTime bookingDate;
 
+    // Unique string for QR code generation
+    @Column(unique = true)
+    private String ticketNumber;
+
     //Track when cancellation happened
     private LocalDateTime cancellationTime;
 

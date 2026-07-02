@@ -3,17 +3,33 @@ import api from '../services/api';
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+/**
+ * Decodes a JWT and returns true if it is expired (or malformed).
+ */
+const isTokenExpired = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // exp is in seconds; Date.now() is in milliseconds
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true; // Treat malformed tokens as expired
+  }
+};
 
-  useEffect(() => {
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      if (parsedUser.token && !isTokenExpired(parsedUser.token)) {
+        return parsedUser;
+      } else {
+        localStorage.removeItem('user');
+      }
     }
-    setLoading(false);
-  }, []);
+    return null;
+  });
+  const [loading, setLoading] = useState(false);
 
   // ✅ UPDATED LOGIN FUNCTION
   const login = async (email, password) => {
@@ -29,7 +45,15 @@ export const AuthProvider = ({ children }) => {
 
     } catch (error) {
       console.error("Login Failed:", error);
-      return { success: false, message: "Invalid credentials" };
+      if (!error.response) {
+        return { success: false, message: "Network Error: unable to reach backend" };
+      }
+      const message =
+        error.response?.data?.message ||
+        error.response?.data ||
+        error.message ||
+        "Login failed";
+      return { success: false, message };
     }
   };
 
@@ -49,8 +73,14 @@ export const AuthProvider = ({ children }) => {
     // Optional: Redirect to login handled by protected routes
   };
 
+  const updateUser = (newUserData) => {
+    const updatedUser = { ...user, ...newUserData };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );

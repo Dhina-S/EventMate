@@ -32,6 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 
-application-dev.properties
+### Secrets — NEVER commit .env files
+.env
+.env.*
+!.env.example
 
-application.properties
+### Note: application.properties is safe to commit (no hardcoded secrets)
+### application-dev.properties is also safe (only dev logging, no secrets)

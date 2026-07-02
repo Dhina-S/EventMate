@@ -55,17 +55,13 @@ const TicketViewer = ({ booking, onClose }) => {
                {/* QR Code */}
                <div className="p-2 bg-white rounded-lg shadow-inner border border-gray-200">
                    <QRCode 
-                     value={JSON.stringify({ 
-                         bid: booking.id, 
-                         seat: ticket.label, 
-                         u: booking.user?.email 
-                     })} 
+                     value={booking.ticketNumber || String(booking.id)} 
                      size={140} 
                    />
                </div>
                
                <p className="text-[10px] text-gray-400 mt-4 font-mono text-center">
-                   ID: {booking.id}-{index + 1} <br/> 
+                   ID: {booking.ticketNumber ? booking.ticketNumber.split('-')[0].toUpperCase() : booking.id}-{index + 1} <br/> 
                    <span className="text-green-600 font-bold">● VALID ENTRY</span>
                </p>
             </div>

@@ -1,9 +1,12 @@
 package com.eventmate.eventmate_backend.controller;
 
 import com.eventmate.eventmate_backend.service.GeminiService;
+import com.eventmate.eventmate_backend.service.RateLimitService;
 import com.eventmate.eventmate_backend.model.Event;
 import com.eventmate.eventmate_backend.repository.EventRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,7 +14,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AiController {
 
     @Autowired
@@ -19,6 +21,18 @@ public class AiController {
 
     @Autowired
     private EventRepository eventRepository;
+
+    @Autowired
+    private RateLimitService rateLimitService;
+
+    /** Extracts the real client IP, respecting X-Forwarded-For from reverse proxies. */
+    private String getClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isEmpty()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
 
     // 1. Generate Description (For Admin Create Page)
     @PostMapping("/generate-description")
@@ -32,9 +46,17 @@ public class AiController {
         return ResponseEntity.ok(Map.of("description", description));
     }
 
-    // 2. Chat with Event (For User Chatbot)
+    // 2. Chat with Event (For User Chatbot) — Rate-limited: 10 req/min per IP
     @PostMapping("/chat")
-    public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, Object> payload,
+                                                    HttpServletRequest request) {
+        // ✅ Rate Limit Check
+        String clientIp = getClientIp(request);
+        if (!rateLimitService.tryConsume(clientIp)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("answer", "⚠️ Too many requests! You can ask 10 questions per minute. Please wait a moment and try again."));
+        }
+
         String question = (String) payload.get("question");
         Object eventIdObj = payload.get("eventId");
 
@@ -71,6 +93,10 @@ public class AiController {
 
             // Call the shared Service Method
             String answer = geminiService.chat(context, question);
+            
+            if (answer == null) {
+                return ResponseEntity.status(500).body(Map.of("answer", "I'm having trouble connecting to my AI brain right now (API Key or Network Error)."));
+            }
             
             return ResponseEntity.ok(Map.of("answer", answer));
 

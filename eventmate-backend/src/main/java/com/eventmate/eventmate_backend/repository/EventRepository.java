@@ -3,6 +3,7 @@ package com.eventmate.eventmate_backend.repository;
 import com.eventmate.eventmate_backend.model.Event;
 import com.eventmate.eventmate_backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
@@ -33,4 +34,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     // ✅ NEW: Filter by Event Type (MOVIE vs NORMAL)
     List<Event> findByEventType(Event.EventType eventType);
+
+    // ✅ FIX: Atomic seat decrement — prevents race conditions during concurrent bookings.
+    // Returns 1 if update succeeded (enough seats), 0 if sold out (nothing updated).
+    @Modifying
+    @Query("UPDATE Event e SET e.availableSeats = e.availableSeats - :count " +
+           "WHERE e.id = :id AND e.availableSeats >= :count")
+    int decrementAvailableSeats(@Param("id") Long id, @Param("count") int count);
 }

@@ -38,14 +38,20 @@ public class UserServiceImpl implements UserService {
         user.setEmail(request.getEmail());
         user.setPhoneNumber(request.getPhoneNumber());
         
-        // 3. Handle Role Logic (Preserved Old Security Logic)
+        // 3. Handle Role Logic (Whitelist allowed registration roles: USER or ORGANIZER)
         String inputRole = request.getRole() != null ? request.getRole().toUpperCase() : "USER";
         if (!inputRole.startsWith("ROLE_")) {
             inputRole = "ROLE_" + inputRole;
         }
-        user.setRole(inputRole);
+        
+        if ("ROLE_ORGANIZER".equals(inputRole)) {
+            user.setRole("ROLE_ORGANIZER");
+        } else {
+            user.setRole("ROLE_USER"); // Default fallback
+        }
 
-        // 4. Encrypt Password
+        // 4. Validate & Encrypt Password
+        validatePasswordStrength(request.getPassword());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         // 5. Save
@@ -78,6 +84,7 @@ public class UserServiceImpl implements UserService {
                 throw new RuntimeException("Invalid current password");
             }
             // Set new password
+            validatePasswordStrength(request.getNewPassword());
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         }
 
@@ -136,5 +143,23 @@ public class UserServiceImpl implements UserService {
         // Restore access by setting role back to USER
         user.setRole("ROLE_USER");
         userRepository.save(user);
+    }
+
+    private void validatePasswordStrength(String password) {
+        if (password == null || password.length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters long.");
+        }
+        boolean hasDigit = false;
+        boolean hasLetter = false;
+        for (char c : password.toCharArray()) {
+            if (Character.isDigit(c)) {
+                hasDigit = true;
+            } else if (Character.isLetter(c)) {
+                hasLetter = true;
+            }
+        }
+        if (!hasDigit || !hasLetter) {
+            throw new RuntimeException("Password must contain both letters and digits.");
+        }
     }
 }

@@ -13,15 +13,20 @@ import java.util.Map;
 @Service
 public class PaymentService {
 
-    @Value("${stripe.secret.key}")
+    @Value("${stripe.secret.key:}")
     private String stripeSecretKey;
 
     @PostConstruct
     public void init() {
-        Stripe.apiKey = stripeSecretKey;
+        if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
+            Stripe.apiKey = stripeSecretKey;
+        }
     }
 
     public Map<String, String> createPaymentIntent(Double amount, String currency) throws Exception {
+        if (stripeSecretKey == null || stripeSecretKey.isBlank()) {
+            throw new IllegalStateException("Stripe secret key is not configured. Set STRIPE_SECRET to use payment processing.");
+        }
         // ✅ FIX: Enforce Minimum Amount for Stripe (approx 50 cents)
         if (amount < 50) {
             throw new RuntimeException("Amount must be at least ₹50 to process payment via Stripe.");
