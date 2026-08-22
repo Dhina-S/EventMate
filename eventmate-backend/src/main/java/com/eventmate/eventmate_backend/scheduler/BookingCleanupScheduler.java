@@ -25,7 +25,7 @@ public class BookingCleanupScheduler {
     @Scheduled(fixedRate = 60000)
     public void cleanupExpiredBookings() {
         // Expiry time: 10 minutes ago
-        LocalDateTime expiryTime = LocalDateTime.now().minusMinutes(1);
+        LocalDateTime expiryTime = LocalDateTime.now().minusMinutes(10);
 
         // Find all bookings that are PENDING and created BEFORE the expiry time
         List<Booking> expiredBookings = bookingRepository.findByStatusAndBookingDateBefore("PENDING", expiryTime);
