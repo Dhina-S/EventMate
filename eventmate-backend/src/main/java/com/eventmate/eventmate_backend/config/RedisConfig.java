@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -25,6 +26,7 @@ import java.time.Duration;
  * - Null values are NOT cached (prevents cache pollution)
  */
 @Configuration
+@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis", matchIfMissing = true)
 @EnableCaching
 public class RedisConfig {
 
